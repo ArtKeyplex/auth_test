@@ -79,7 +79,6 @@ func (us *userService) RefreshToken(tokenStr string) (string, error) {
 		return "", errors.New("недопустимый токен")
 	}
 
-	// Проверяем, что токен ещё не истёк
 	if time.Unix(claims.ExpiresAt, 0).Before(time.Now()) {
 		return "", errors.New("токен просрочен")
 	}

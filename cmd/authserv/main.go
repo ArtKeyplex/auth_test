@@ -29,11 +29,13 @@ func main() {
 	fmt.Println("JWTSecret:", string(config.JwtSecret))
 	// USER SERVICE
 	userService := service.NewUserService(newStore, config.JwtSecret)
+
 	// LOGIN
 	loginHandler := &login.LoginHandler{
 		UserService: userService,
 	}
 	http.Handle("/login", loginHandler)
+
 	// VERIFY
 	verifyHandler := &verify.VerifyHandler{
 		UserService: userService,

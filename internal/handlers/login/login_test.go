@@ -2,7 +2,6 @@ package login
 
 import (
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +26,6 @@ func (m *MockUserService) RefreshToken(username string) (string, error) {
 }
 
 func TestLogin(t *testing.T) {
-	fmt.Println("Start")
 	mockUserService := &MockUserService{
 		ValidateCredentialsFunc: func(username, password string) (bool, error) {
 			if username == "Никита" && password == "password123" {
