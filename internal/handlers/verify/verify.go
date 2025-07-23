@@ -1,4 +1,4 @@
-package handlers
+package verify
 
 import (
 	"auth_test/internal/service"

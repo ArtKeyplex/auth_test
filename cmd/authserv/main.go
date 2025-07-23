@@ -2,7 +2,8 @@ package main
 
 import (
 	"auth_test/configs"
-	"auth_test/internal/handlers"
+	"auth_test/internal/handlers/login"
+	"auth_test/internal/handlers/verify"
 	"auth_test/internal/service"
 	"auth_test/internal/store"
 	"fmt"
@@ -29,12 +30,12 @@ func main() {
 	// USER SERVICE
 	userService := service.NewUserService(newStore, config.JwtSecret)
 	// LOGIN
-	loginHandler := &handlers.LoginHandler{
+	loginHandler := &login.LoginHandler{
 		UserService: userService,
 	}
 	http.Handle("/login", loginHandler)
 	// VERIFY
-	verifyHandler := &handlers.VerifyHandler{
+	verifyHandler := &verify.VerifyHandler{
 		UserService: userService,
 	}
 	http.Handle("/verify", verifyHandler)
