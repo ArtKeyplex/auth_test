@@ -2,26 +2,15 @@ package main
 
 import (
 	"auth_test/configs"
+	"auth_test/internal/handlers"
 	"auth_test/internal/service"
 	"auth_test/internal/store"
-
 	"fmt"
+	"log"
+	"net/http"
 )
 
 func main() {
-	jwtSecret := []byte("СЕКРЕТНЫЙ_КЛЮЧ") // ваш секретный ключ
-	fmt.Println("------------------------------------------------------")
-	fmt.Println("----------------1. Скелет + конфиг--------------------")
-	fmt.Println("------------------------------------------------------")
-	config, err := configs.LoadConfig()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	fmt.Println("Имя приложения:", config.AppName)
-	fmt.Println("------------------------------------------------------")
-	fmt.Println("---------------3. InMemoryUserStore-------------------")
-	fmt.Println("------------------------------------------------------")
 	newStore := &store.InMemoryUserStore{
 		Users: map[string]*service.User{
 			"Никита": &service.User{Username: "Никита", Password: "password123"},
@@ -30,60 +19,29 @@ func main() {
 		},
 	}
 
-	// Добавление нового пользователя + проверка на существование (т.к. map)
-	addName := "Никита"
-	_, err = newStore.Add(&service.User{Username: addName, Password: "password1223"})
+	config, err := configs.LoadConfig()
 	if err != nil {
-		fmt.Println("Ошибка добавления:", err, "(", addName, ")")
+		fmt.Println("Error:", err)
+		return
 	}
-
-	// Вывод всех пользователей
-	for _, user := range newStore.Users {
-		fmt.Println(user)
+	fmt.Println("Имя приложения:", config.AppName)
+	fmt.Println("JWTSecret:", string(config.JwtSecret))
+	// USER SERVICE
+	userService := service.NewUserService(newStore, config.JwtSecret)
+	// LOGIN
+	loginHandler := &handlers.LoginHandler{
+		UserService: userService,
 	}
-
-	fmt.Println("------------------------------------------------------")
-	fmt.Println("-----------------2. UserService-----------------------")
-	fmt.Println("--------------Validate Credentials--------------------")
-	fmt.Println("------------------------------------------------------")
-	// Создаем сервис
-	userSvc := service.NewUserService(newStore, jwtSecret)
-
-	// Проверим пароль 'password123' среди всех пользователей
-	password := "password123"
-
-	validateCount := 1
-	for username, _ := range newStore.Users {
-		fmt.Print(validateCount, ") ")
-		validateCount++
-		valid, err := userSvc.ValidateCredentials(username, password)
-		if err != nil {
-			fmt.Println("Ошибка при валидации:", err)
-			continue
-		}
-		if !valid {
-			fmt.Println("Неверные учетные данные")
-			continue
-		}
-		fmt.Println("Учетные данные подтверждены!")
+	http.Handle("/login", loginHandler)
+	// VERIFY
+	verifyHandler := &handlers.VerifyHandler{
+		UserService: userService,
 	}
-	fmt.Println("------------------------------------------------------")
-	fmt.Println("-------------------Generate Token---------------------")
-	fmt.Println("------------------------------------------------------")
+	http.Handle("/verify", verifyHandler)
 
-	token, err := userSvc.GenerateToken(addName)
-	if err != nil {
-		fmt.Println("Ошибка при генерации:", err)
+	// Запуск сервера
+	fmt.Println("Сервер запущен на :8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal(err)
 	}
-	fmt.Println("Сгенерированный токен:", token)
-
-	fmt.Println("------------------------------------------------------")
-	fmt.Println("-------------------Refresh Token----------------------")
-	fmt.Println("------------------------------------------------------")
-	newToken, err := userSvc.RefreshToken(token)
-	if err != nil {
-		fmt.Println("Ошибка обновления:", err)
-	}
-	fmt.Println("Обновленный токен:", newToken)
-	fmt.Println("------------------------------------------------------")
 }

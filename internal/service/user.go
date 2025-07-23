@@ -71,7 +71,7 @@ func (us *userService) RefreshToken(tokenStr string) (string, error) {
 		return us.jwtSecret, nil
 	})
 	if err != nil {
-		return "", err
+		return "", errors.New("ошибка парсинга/валидации")
 	}
 
 	claims, ok := token.Claims.(*jwt.StandardClaims)
@@ -93,7 +93,7 @@ func (us *userService) RefreshToken(tokenStr string) (string, error) {
 	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims)
 	signedToken, err := newToken.SignedString(us.jwtSecret)
 	if err != nil {
-		return "", err
+		return "", errors.New("ошибка кодирования в jwt токен")
 	}
 	return signedToken, nil
 }
