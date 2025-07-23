@@ -1,4 +1,4 @@
-package handlers
+package login
 
 import (
 	"auth_test/internal/service"
@@ -35,7 +35,7 @@ func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	valid, err := h.UserService.ValidateCredentials(username, password)
 	if err != nil || !valid {
-		w.WriteHeader(http.StatusUnauthorized)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

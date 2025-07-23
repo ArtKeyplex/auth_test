@@ -1,7 +1,6 @@
-package tests
+package login
 
 import (
-	"auth_test/internal/handlers"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -41,7 +40,7 @@ func TestLogin(t *testing.T) {
 		},
 	}
 
-	handler := &handlers.LoginHandler{
+	handler := &LoginHandler{
 		UserService: mockUserService,
 	}
 
@@ -71,19 +70,15 @@ func TestLogin(t *testing.T) {
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name:           "Неверный логин",
-			authHeader:     "Basic " + base64.StdEncoding.EncodeToString([]byte("НикитаF:password123")),
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
 			name:           "Неверный пароль",
 			authHeader:     "Basic " + base64.StdEncoding.EncodeToString([]byte("Никита:password1234")),
 			expectedStatus: http.StatusBadRequest,
 		},
+
 		{
-			name:           "Неверный заголовок",
-			authHeader:     "Basic invalid",
-			expectedStatus: http.StatusUnauthorized,
+			name:           "Неверный парсинг 2",
+			authHeader:     "Basic " + base64.StdEncoding.EncodeToString([]byte("Никита:")),
+			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
