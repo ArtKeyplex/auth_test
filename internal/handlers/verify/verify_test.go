@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,7 +10,7 @@ import (
 type MockUserService struct {
 	ValidateCredentialsFunc func(username, password string) (bool, error)
 	GenerateTokenFunc       func(username string) (string, error)
-	RefreshTokenFunc        func(username string) (string, error)
+	RefreshTokenFunc        func(token string) (string, error)
 }
 
 func (m *MockUserService) ValidateCredentials(username, password string) (bool, error) {
@@ -20,15 +21,19 @@ func (m *MockUserService) GenerateToken(username string) (string, error) {
 	return m.GenerateTokenFunc(username)
 }
 
-func (m *MockUserService) RefreshToken(username string) (string, error) {
-	return m.RefreshTokenFunc(username)
+func (m *MockUserService) RefreshToken(token string) (string, error) {
+	return m.RefreshTokenFunc(token)
 }
 
 func TestVerify(t *testing.T) {
 	mockUserService := &MockUserService{
-		RefreshTokenFunc: func(username string) (string, error) {
+		RefreshTokenFunc: func(token string) (string, error) {
+			if token == "Internal" {
+				return "newToken", errors.New("Internal server error")
+			}
 			return "newToken", nil
 		},
+
 		GenerateTokenFunc: func(username string) (string, error) {
 			return "generatedToken", nil
 		},
@@ -52,6 +57,11 @@ func TestVerify(t *testing.T) {
 			name:           "Пустой/неверный заголовок",
 			authHeader:     "",
 			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "Внутренняя ошибка",
+			authHeader:     "Bearer " + "Internal",
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
 
