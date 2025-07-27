@@ -1,50 +1,26 @@
 package configs
 
 import (
-	"flag"
-	"os"
+	"fmt"
+	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
-	AppName   string
-	JwtSecret []byte
-	Port      string
+	AppName   string `envconfig:"APP_NAME" default:"AuthService"`
+	JwtSecret string `envconfig:"JWT_SECRET" default:"SecretKey"`
+	Port      int    `envconfig:"PORT" default:"8081"`
 }
 
 func LoadConfig() (*Config, error) {
-	defaultAppName := "AuthServiceBy_CHEREP"
-	defaultJwtSecret := "SuperSecretKey"
-	defaultPort := "8080"
-
-	var (
-		appName   = flag.String("appName", "", "App Name")
-		jwtSecret = flag.String("jwtSecret", "", "Jwt Secret")
-		port      = flag.String("port", "", "Port")
-	)
-
-	flag.Parse()
-
-	if envAppName := os.Getenv("APP_NAME"); envAppName != "" {
-		*appName = envAppName
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Нет файла .env или ошибка чтения")
 	}
-	if *appName == "" {
-		*appName = defaultAppName
+	var cfg Config
+
+	if err := envconfig.Process("", &cfg); err != nil {
+		return nil, err
 	}
 
-	if envJwtSecret := os.Getenv("JWT_SECRET"); envJwtSecret != "" {
-		*jwtSecret = envJwtSecret
-	}
-	if *jwtSecret == "" {
-		*jwtSecret = defaultJwtSecret
-	}
-
-	if envPort := os.Getenv("PORT"); envPort != "" {
-		*port = envPort
-	}
-	if *port == "" {
-		*port = defaultPort
-	}
-
-	config := &Config{AppName: *appName, JwtSecret: []byte(*jwtSecret), Port: *port}
-	return config, nil
+	return &cfg, nil
 }

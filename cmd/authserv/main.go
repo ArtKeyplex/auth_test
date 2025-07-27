@@ -23,7 +23,7 @@ func main() {
 	fmt.Println("JWTSecret:", string(config.JwtSecret))
 
 	// USER SERVICE
-	userService := service.NewUserService(newStore, config.JwtSecret)
+	userService := service.NewUserService(newStore, []byte(config.JwtSecret))
 
 	// LOGIN
 	loginHandler := &login.LoginHandler{
