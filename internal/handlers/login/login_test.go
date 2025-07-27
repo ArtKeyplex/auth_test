@@ -83,9 +83,7 @@ func TestLogin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/", nil)
-			if tt.authHeader != "" {
-				req.Header.Add("Authorization", tt.authHeader)
-			}
+			req.Header.Add("Authorization", tt.authHeader)
 			resp := httptest.NewRecorder()
 			handler.ServeHTTP(resp, req)
 			if resp.Code != tt.expectedStatus {

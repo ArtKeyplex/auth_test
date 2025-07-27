@@ -2,46 +2,43 @@ package login
 
 import (
 	"auth_test/internal/service"
-	"encoding/base64"
+	"bytes"
 	"encoding/json"
 	"net/http"
-	"strings"
 )
 
 type LoginHandler struct {
 	UserService service.UserService
 }
 
+type loginResponse struct {
+	Token string `json:"token"`
+}
+
 func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" || !strings.HasPrefix(authHeader, "Basic ") {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	h.Login(w, r)
+}
 
-	payload := strings.TrimPrefix(authHeader, "Basic ")
-	decoded, err := base64.StdEncoding.DecodeString(payload)
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
+	username, password, ok := r.BasicAuth()
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	credentials := strings.SplitN(string(decoded), ":", 2)
-	if len(credentials) != 2 {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-	username, password := credentials[0], credentials[1]
 
 	valid, err := h.UserService.ValidateCredentials(username, password)
-	if err != nil || !valid {
-		w.WriteHeader(http.StatusBadRequest)
+	if err != nil {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+	if !valid {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	token, err := h.UserService.GenerateToken(username)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -51,11 +48,14 @@ func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Устанавливаем заголовок Authorization с Bearer токеном
 	w.Header().Set("Authorization", "Bearer "+token)
-	// Возвращаем статус 200
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	response := loginResponse{Token: token}
 
-	// Возвращаем json
-	response := map[string]string{"token": token}
-	json.NewEncoder(w).Encode(response)
-	return
+	var buff bytes.Buffer
+	if err := json.NewEncoder(&buff).Encode(response); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(buff.Bytes())
 }

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"github.com/golang-jwt/jwt"
 	"time"
 )
@@ -37,7 +36,7 @@ func NewUserService(store UserStore, jwtSecret []byte) UserService {
 func (us *userService) ValidateCredentials(username, password string) (bool, error) {
 	user, err := us.store.Get(username)
 	if err != nil {
-		return false, err
+		return false, ErrUserNotFound
 	}
 	if user.Password != password {
 		return false, nil
@@ -55,7 +54,7 @@ func (us *userService) GenerateToken(username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString(us.jwtSecret)
 	if err != nil {
-		return "", err
+		return "", ErrTokenSigning
 	}
 	return signedToken, nil
 }
@@ -66,33 +65,27 @@ func (us *userService) RefreshToken(tokenStr string) (string, error) {
 	token, err := jwt.ParseWithClaims(tokenStr, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// проверка метода подписи
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("неподдерживаемый метод подписи")
+			return nil, ErrUnsupportedSigningMethod
 		}
 		return us.jwtSecret, nil
 	})
 	if err != nil {
-		return "", errors.New("ошибка парсинга/валидации")
+		return "", ErrTokenValidation
 	}
 
 	claims, ok := token.Claims.(*jwt.StandardClaims)
 	if !ok || !token.Valid {
-		return "", errors.New("недопустимый токен")
+		return "", ErrInvalidToken
 	}
 
 	if time.Unix(claims.ExpiresAt, 0).Before(time.Now()) {
-		return "", errors.New("токен просрочен")
+		return "", ErrTokenExpired
 	}
 
 	// Создаём новый токен с обновленным exp
-	newClaims := jwt.StandardClaims{
-		Subject:   claims.Subject,
-		ExpiresAt: time.Now().Add(60 * time.Minute).Unix(),
-		IssuedAt:  time.Now().Unix(),
-	}
-	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims)
-	signedToken, err := newToken.SignedString(us.jwtSecret)
+	signedToken, err := us.GenerateToken(claims.Subject)
 	if err != nil {
-		return "", errors.New("ошибка кодирования в jwt токен")
+		return "", ErrTokenGeneration
 	}
 	return signedToken, nil
 }
