@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"auth_test/internal/handlers/login"
-	"auth_test/internal/service"
 	"net/http"
 	"time"
 )
@@ -23,17 +21,4 @@ func NewServer(loginHandler http.HandlerFunc, verifyHandler http.HandlerFunc) *h
 	}
 
 	return srv
-}
-
-func NewLoginHandler(userService *service.UserService) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-	UserService:
-		userService
-	}
-}
-
-func NewVerifyHandler(userService *service.UserService) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Ваша логика verify, использующая userService
-	}
 }
