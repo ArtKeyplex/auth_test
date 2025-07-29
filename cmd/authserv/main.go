@@ -31,7 +31,6 @@ func main() {
 
 	// Инициализируем наше хранилище
 	newStore := store.NewPostgresUserStore(db)
-
 	// Создаем тип, удовлетворяющий интерфейсу UserService
 	userService := service.NewUserService(newStore, []byte(config.JwtSecret))
 
@@ -42,6 +41,7 @@ func main() {
 	// Создаем сервер
 	srv := internal.NewServer(loginHandler.ServeHTTP, verifyHandler.ServeHTTP)
 	log.Info().Str("PORT", srv.Addr).Msg("starting server")
+	// newStore.AddUser(ctx, db, "Никита", "password123")
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal().Err(err).Msg("server stopped")
 	}

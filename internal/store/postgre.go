@@ -5,6 +5,8 @@ import (
 	"auth_test/internal/service"
 	"context"
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
+	"regexp"
 )
 
 type PostgresUserStore struct {
@@ -25,8 +27,17 @@ func (ps *PostgresUserStore) Get(username string) (*service.User, error) {
 	return &user, nil
 }
 
-func (ps *PostgresUserStore) Add(user *service.User) (bool, error) {
-
+func (ps *PostgresUserStore) AddUser(ctx context.Context, db *pgx.Conn, login string, password string) (bool, error) {
+	log.Info().Msg("adding user")
+	_, err := db.Exec(ctx,
+		`INSERT INTO users (login, password) VALUES ($1, $2)`,
+		login, password)
+	if err != nil {
+		err = FindError(err.Error())
+		log.Error().Err(err).Msg("error adding user")
+		return false, err
+	}
+	log.Info().Msg("successfully added user")
 	return true, nil
 }
 
@@ -49,4 +60,19 @@ func InitDb(ctx context.Context, cfg *configs.Config) (*pgx.Conn, error) {
 	}
 
 	return db, nil
+}
+
+func FindError(errMsg string) error {
+	re := regexp.MustCompile(`SQLSTATE (\d{5})`)
+	errCode := re.FindStringSubmatch(errMsg)[1]
+
+	log.Info().Str("Code", errCode).Msg("finding error")
+	switch errCode {
+	case "23505":
+		return service.ErrUserExists
+	case "23502":
+		return service.NullNotAllowedError
+	default:
+		return service.SomethingWrongError
+	}
 }
