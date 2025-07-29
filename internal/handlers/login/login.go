@@ -4,6 +4,7 @@ import (
 	"auth_test/internal/service"
 	"bytes"
 	"encoding/json"
+	"github.com/rs/zerolog/log"
 	"net/http"
 )
 
@@ -22,22 +23,28 @@ func (h *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	username, password, ok := r.BasicAuth()
 	if !ok {
+		log.Error().Msg("Basic auth failed")
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	valid, err := h.UserService.ValidateCredentials(username, password)
+	// TODO: connection error
 	if err != nil {
+		log.Error().Err(err).Msg("Error validating username")
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
+
 	if !valid {
+		log.Error().Msg("Error validating password")
 		http.Error(w, "invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
 	token, err := h.UserService.GenerateToken(username)
 	if err != nil {
+		log.Error().Err(err).Msg("Error generating token")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -53,6 +60,7 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	var buff bytes.Buffer
 	if err := json.NewEncoder(&buff).Encode(response); err != nil {
+		log.Error().Err(err).Msg("Error encoding response to JSON")
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}

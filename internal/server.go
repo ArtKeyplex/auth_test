@@ -1,9 +1,27 @@
 package internal
 
 import (
+	"auth_test/internal/handlers/login"
+	"auth_test/internal/handlers/verify"
+	"auth_test/internal/service"
 	"net/http"
 	"time"
 )
+
+func NewHandler(handlerType string, userService service.UserService) http.Handler {
+	switch handlerType {
+	case "verify":
+		return &verify.VerifyHandler{
+			UserService: userService,
+		}
+	case "login":
+		return &login.LoginHandler{
+			UserService: userService,
+		}
+	default:
+		return nil
+	}
+}
 
 func NewServer(loginHandler http.HandlerFunc, verifyHandler http.HandlerFunc) *http.Server {
 	mux := http.NewServeMux()
@@ -19,6 +37,5 @@ func NewServer(loginHandler http.HandlerFunc, verifyHandler http.HandlerFunc) *h
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
-
 	return srv
 }

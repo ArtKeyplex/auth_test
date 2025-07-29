@@ -3,40 +3,47 @@ package main
 import (
 	"auth_test/configs"
 	"auth_test/internal"
-	"auth_test/internal/handlers/login"
-	"auth_test/internal/handlers/verify"
 	"auth_test/internal/service"
 	"auth_test/internal/store"
-	"fmt"
-	"log"
+	"context"
+	"github.com/rs/zerolog"
+	"os"
 )
 
 func main() {
-	newStore := store.NewInMemoryUserStore()
+	ctx := context.Background()
+	log := zerolog.New(os.Stdout).With().Timestamp().Logger()
 
+	// Загружаем конфиг
 	config, err := configs.LoadConfig()
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Error().Err(err).Msg("failed to load config")
 		return
 	}
-	fmt.Println("Имя приложения:", config.AppName)
-	fmt.Println("JWTSecret:", string(config.JwtSecret))
+	log.Info().Msg("config loaded")
 
-	// USER SERVICE
+	// Подключаемся к PSQL
+	db, err := store.InitDb(ctx, config)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to database")
+	}
+	log.Info().Msg("connected to database")
+
+	// Инициализируем наше хранилище
+	newStore := store.NewPostgresUserStore(db)
+
+	// Создаем тип, удовлетворяющий интерфейсу UserService
 	userService := service.NewUserService(newStore, []byte(config.JwtSecret))
 
-	// LOGIN
-	loginHandler := &login.LoginHandler{
-		UserService: userService,
-	}
-	// VERIFY
-	verifyHandler := &verify.VerifyHandler{
-		UserService: userService,
-	}
+	// Создаем обработчики http-запросов
+	loginHandler := internal.NewHandler("login", userService)
+	verifyHandler := internal.NewHandler("verify", userService)
+
+	// Создаем сервер
 	srv := internal.NewServer(loginHandler.ServeHTTP, verifyHandler.ServeHTTP)
-	fmt.Println("Сервер слушает на", srv.Addr)
+	log.Info().Str("PORT", srv.Addr).Msg("starting server")
 	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("server stopped")
 	}
 
 }
