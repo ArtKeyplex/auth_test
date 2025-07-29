@@ -1,0 +1,129 @@
+openapi: 3.0.0
+
+info:
+  title: "Спецификация для сервиса аутентификации"
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер
+
+paths:
+  /login:
+    post:
+      summary: "Вход в систему"
+      security:
+        - BasicAuth: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginExample'
+
+      responses:
+        '200':
+          description: "Успешный вход в систему"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+        '401':
+          description: "Неудачный вход в систему"
+
+        '500':
+          description: "Внутренняя ошибка сервера"
+
+  /verify:
+    post:
+      summary: "Проверить токен"
+      security:
+        - BearerAuth: []
+
+      responses:
+        '200':
+          description: "Токен обновлен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+
+        '400':
+          description: "Неверный токен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: "Неверный заголовок"
+
+
+components:
+  schemas:
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJJ9.eyJleIn0.lSt6PxGnR-XYzFY"
+
+    VerifyResponse:
+      type: object
+      properties:
+        refreshed token:
+          type: string
+          example: "eyJJ9.eyJleIn0.lSt6PxGnR-XYzFY"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "error: ошибка парсинга/валидации"
+
+    LoginExample:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "Никита"
+        password:
+          type: string
+          example: "password123"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "JWT"
+
+    BasicAuth:
+      type: http
+      scheme: basic
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
