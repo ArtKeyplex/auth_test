@@ -2,6 +2,8 @@ package service
 
 import (
 	"github.com/golang-jwt/jwt"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
@@ -36,10 +38,14 @@ func NewUserService(store UserStore, jwtSecret []byte) UserService {
 func (us *userService) ValidateCredentials(username, password string) (bool, error) {
 	user, err := us.store.Get(username)
 	if err != nil {
+		log.Info().Msg("login is incorrect")
 		return false, ErrUserNotFound
 	}
-	if user.Password != password {
-		return false, nil
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		log.Info().Msg("password is incorrect")
+		return false, ErrInvalidCredentials
 	}
 	return true, nil
 }

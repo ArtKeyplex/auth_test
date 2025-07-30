@@ -12,7 +12,12 @@ import (
 
 func main() {
 	ctx := context.Background()
-	log := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer logFile.Close()
+	log := zerolog.New(logFile).With().Timestamp().Logger()
 
 	// Загружаем конфиг
 	config, err := configs.LoadConfig()
@@ -27,6 +32,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connect to database")
 	}
+	defer db.Close(ctx)
 	log.Info().Msg("connected to database")
 
 	// Инициализируем наше хранилище
@@ -41,7 +47,6 @@ func main() {
 	// Создаем сервер
 	srv := internal.NewServer(loginHandler.ServeHTTP, verifyHandler.ServeHTTP)
 	log.Info().Str("PORT", srv.Addr).Msg("starting server")
-	// newStore.AddUser(ctx, db, "Никита", "password123")
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal().Err(err).Msg("server stopped")
 	}

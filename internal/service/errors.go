@@ -13,6 +13,7 @@ var (
 	ErrTokenGeneration          = errors.New("failed to generate token")
 	ErrUnsupportedSigningMethod = errors.New("unsupported signing method")
 	ErrTokenSigning             = errors.New("failed to sign JWT token")
+	ErrInvalidCredentials       = errors.New("invalid credentials")
 
 	SqlQuerySyntaxError = errors.New("sql query syntax error")
 	NullNotAllowedError = errors.New("sql insert null into not null error")

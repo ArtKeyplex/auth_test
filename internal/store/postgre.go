@@ -4,8 +4,11 @@ import (
 	"auth_test/configs"
 	"auth_test/internal/service"
 	"context"
+	"database/sql"
+	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/crypto/bcrypt"
 	"regexp"
 )
 
@@ -22,19 +25,24 @@ func (ps *PostgresUserStore) Get(username string) (*service.User, error) {
 	err := ps.db.QueryRow(context.Background(), "SELECT login, password FROM users WHERE login=$1", username).
 		Scan(&user.Username, &user.Password)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, service.ErrUserNotFound
+		}
 	}
 	return &user, nil
 }
 
 func (ps *PostgresUserStore) AddUser(ctx context.Context, db *pgx.Conn, login string, password string) (bool, error) {
 	log.Info().Msg("adding user")
-	_, err := db.Exec(ctx,
-		`INSERT INTO users (login, password) VALUES ($1, $2)`,
-		login, password)
+	var id int
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	err = db.QueryRow(ctx,
+		`INSERT INTO users (login, password) VALUES ($1, $2) RETURNING id`,
+		login, hashedPassword).Scan(&id)
 	if err != nil {
 		err = FindError(err.Error())
 		log.Error().Err(err).Msg("error adding user")
+		// TODO: Откат id (PRIMARY KEY) при неудачном добавлении пользователя
 		return false, err
 	}
 	log.Info().Msg("successfully added user")
